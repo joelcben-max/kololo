@@ -87,6 +87,14 @@ button{cursor:pointer}
 .bt.g{background:var(--pkl);color:var(--pkd)}
 .bt.d{background:var(--out);color:var(--outt)}
 .t{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:var(--out);color:var(--outt);padding:10px 16px;border-radius:12px;z-index:9;display:none}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px}
+.cal b{text-align:center;font-size:13px;color:var(--mu);padding:4px 0}
+.dy{position:relative;height:46px;border:1px solid var(--bd);background:var(--cd);border-radius:12px;font-size:16px;padding:0}
+.dy.td{border-color:var(--pk);color:var(--pk);font-weight:700}
+.dy i{position:absolute;bottom:5px;left:50%;display:flex;gap:3px;transform:translateX(-50%)}
+.dy i span{width:6px;height:6px;border-radius:50%;display:block}
+.dy i .a{background:var(--in)}
+.dy i .b{background:var(--out)}
 </style>
 </head>
 <body>
@@ -134,7 +142,7 @@ async function rm(id,all){const t=tx.find(x=>x.id==id);if(!t)return;cl();
 function askBank(){show(`<p style="margin:4px 0">כמה יש כרגע בחשבון הבנק?</p><input id="bk" type="number" inputmode="decimal" value="${Math.round(bank()*100)/100}"><button class="bt" onclick="saveBank()">עדכון</button><button class="bt g" onclick="cl()">ביטול</button>`);$('#bk').select()}
 async function saveBank(){const v=parseFloat($('#bk').value);if(!isFinite(v))return;cl();try{await setOpen(open0+v-bank())}catch(e){toast()}}
 const nt=()=>f.type=='out'&&!f.done;
-function openAdd(){f={type:'out',cat:'',done:true,rec:false,n:12,date:T(),amt:'',note:''};renderForm();$('#amt').focus()}
+function openAdd(ds){f={type:'out',cat:'',done:true,rec:false,n:12,date:ds||T(),amt:'',note:''};if(f.date>T())f.done=false;renderForm();$('#amt').focus()}
 function sf(k,v){f[k]=v;if(k=='type')f.cat='';if(k=='date'&&v>T())f.done=false;renderForm();if(k=='type')$('#amt').focus()}
 const can=()=>+f.amt>0&&(f.cat||(nt()&&f.note.trim()));
 function chk(){$('#sv').disabled=!can()}
@@ -158,6 +166,17 @@ async function save(){
   cl();view={y,m:m-1};if(mode=='y')mode='m';
   try{await put(list)}catch(e){toast()}
 }
+function cal(){
+  const first=new Date(view.y,view.m,1).getDay(),dim=new Date(view.y,view.m+1,0).getDate(),ym=view.y+'-'+pad(view.m+1),now=T();
+  let h='<p class="em" style="margin:0 0 6px">לחצו על יום כדי לראות צפי יתרה</p><div class="cal">'+['א','ב','ג','ד','ה','ו','ש'].map(x=>'<b>'+x+'</b>').join('')+'<span></span>'.repeat(first);
+  for(let d=1;d<=dim;d++){const ds=ym+'-'+pad(d),L=tx.filter(t=>t.date==ds);
+    h+=`<button class="dy${ds==now?' td':''}" onclick="openDay('${ds}')">${d}${L.length?`<i>${L.some(t=>t.type=='in')?'<span class="a"></span>':''}${L.some(t=>t.type=='out')?'<span class="b"></span>':''}</i>`:''}</button>`}
+  return h+'</div>'}
+function openDay(ds){
+  const L=tx.filter(t=>t.date==ds),bal=open0+tx.filter(t=>t.date<=ds).reduce((a,t)=>a+sg(t),0),[y,m,d]=ds.split('-').map(Number);
+  show(`<p style="margin:2px 0;color:var(--mu)">${d} ב${MN[m-1]} ${y}</p><div class="m m2" style="margin:6px 0 10px"><small>צפי יתרה בסוף היום</small><b>${fm(bal)}</b></div>`
+    +(L.length?L.map(t=>`<div class="row ${t.type}${t.done?'':' pl'}"><div class="ic">${IC[t.cat]||'🧾'}</div><div class="g"><div>${esc(t.note||t.cat)}</div><small>${t.done?'בוצע':'צפי'}${t.rid?' · קבוע':''}</small></div><div class="am">${fm(sg(t),1)}</div></div>`).join(''):'<p class="em" style="margin:12px">אין תנועות ביום הזה</p>')
+    +`<button class="bt" onclick="openAdd('${ds}')">＋ תנועה ליום הזה</button><button class="bt g" onclick="cl()">סגירה</button>`)}
 function sum(){
   const L=inM(view.y,view.m);
   const blk=(type,title)=>{const by={};L.filter(t=>t.type==type).forEach(t=>by[t.cat]=(by[t.cat]||0)+t.amt);
@@ -174,7 +193,7 @@ function draw(){
 <div class="nav"><button onclick="go(-1)" aria-label="הקודם">›</button><strong>${mode!='y'?MN[view.m]+' '+view.y:view.y}</strong><button onclick="go(1)" aria-label="הבא">‹</button></div>`;
   if(mode=='m'){
     const L=inM(view.y,view.m).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
-    h+=L.length?L.map(t=>`<div class="row ${t.type}${t.done?'':' pl'}" onclick="act('${t.id}')"><div class="ic">${IC[t.cat]||'🧾'}</div><div class="g"><div>${esc(t.note||t.cat)}</div><small>${t.note?esc(t.cat)+' · ':''}${+t.date.slice(8)}/${+t.date.slice(5,7)}${t.done?'':' · צפי'}${t.rid?' · קבוע':''}</small></div><div class="am">${fm(sg(t),1)}</div><button class="ck ${t.done?'on':''}" onclick="event.stopPropagation();tog('${t.id}')" aria-label="סימון כבוצע">${t.done?'✓':''}</button></div>`).join(''):'<p class="em">אין תנועות בחודש הזה 🌸<br>לחצו ＋ כדי להוסיף</p>';
+    h+=cal()+(L.length?L.map(t=>`<div class="row ${t.type}${t.done?'':' pl'}" onclick="act('${t.id}')"><div class="ic">${IC[t.cat]||'🧾'}</div><div class="g"><div>${esc(t.note||t.cat)}</div><small>${t.note?esc(t.cat)+' · ':''}${+t.date.slice(8)}/${+t.date.slice(5,7)}${t.done?'':' · צפי'}${t.rid?' · קבוע':''}</small></div><div class="am">${fm(sg(t),1)}</div><button class="ck ${t.done?'on':''}" onclick="event.stopPropagation();tog('${t.id}')" aria-label="סימון כבוצע">${t.done?'✓':''}</button></div>`).join(''):'<p class="em">אין תנועות בחודש הזה 🌸<br>לחצו ＋ כדי להוסיף</p>');
   }else if(mode=='s')h+=sum();
   else{
     h+='<div class="row yh y"><span></span><small>שינוי בחודש</small><small>צפי לסוף החודש</small></div>';
