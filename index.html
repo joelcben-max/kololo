@@ -97,6 +97,11 @@ button{cursor:pointer}
 .dy i .b{background:var(--out)}
 .m-alert{background:linear-gradient(135deg,#b91c1c,#dc2626);color:#fff;box-shadow:0 8px 20px rgba(220,38,38,.3)}
 .m-alert .neg,.good .neg,.bad .neg{color:inherit}
+.bar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.bar b{font-size:19px;color:var(--pkd)}
+.menu{width:46px;height:46px;border:1px solid var(--bd);background:var(--cd);border-radius:14px;font-size:22px;color:var(--pk);padding:0}
+.mi{display:flex;align-items:center;gap:12px;width:100%;border:0;background:var(--bg);border-radius:14px;padding:14px;margin-top:8px;font-size:16px;text-align:start}
+.mi span{font-size:20px}
 .alert-box{background:var(--outb);color:var(--out);border:1px solid var(--out);border-radius:14px;padding:10px 12px;margin-bottom:10px;font-size:14px;font-weight:600}
 .tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .tools button{border:1px solid var(--bd);background:var(--cd);border-radius:13px;padding:11px 7px;font-size:14px;color:var(--pkd)}
@@ -117,14 +122,14 @@ button{cursor:pointer}
 <div id="ov" onclick="cl()"></div>
 <div class="t" id="t">שגיאה בסנכרון או בשמירת הנתונים</div>
 <script>
-const IN=['משכורת יואל','משכורת חיה','קצבת ילדים','נכות','אחר'],OUT=['סופר','סופר טוב','דלק','קפה / מסעדה','ילדים','חיה קבוע','בגדים ילדים','שונות'];
-const IC={'משכורת יואל':'💼','משכורת חיה':'👩‍💼','קצבת ילדים':'👶','נכות':'🤝','אחר':'✨','סופר':'🛒','סופר טוב':'🥑','דלק':'⛽','קפה / מסעדה':'☕','ילדים':'🧸','חיה קבוע':'💖','בגדים ילדים':'👕','שונות':'🧾'};
+const IN=['משכורת יואל','משכורת חיה','קצבת ילדים','נכות','אחר'],OUT=['סופר','סופר טוב','דלק יואל','דלק חיה','קפה / מסעדה','ילדים','חיה קבוע','בגדים ילדים','שונות'];
+const IC={'משכורת יואל':'💼','משכורת חיה':'👩‍💼','קצבת ילדים':'👶','נכות':'🤝','אחר':'✨','סופר':'🛒','סופר טוב':'🥑','דלק':'⛽','קפה / מסעדה':'☕','ילדים':'🧸','חיה קבוע':'💖','בגדים ילדים':'👕','שונות':'🧾','דלק יואל':'⛽','דלק חיה':'⛽','בי״ס רועי':'🏫','ישיבה איתן':'📖','הלוואה':'🏦','חשמל':'💡','פלאפון':'📱','שכירות':'🏠','תרומה':'🤲','חיה חדר כושר':'🏋️','חיה לימודים':'🎓','אינטרנט':'🌐','ארנונה':'🏛️','גז':'🔥','מים':'💧','וועד בניין':'🏢'};
 const MN=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const $=s=>document.querySelector(s),pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),T=()=>ymd(new Date());
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36);
-let tx=[],open0=0,db=null,mode='m',f={},editingId=null,searchTerm='',budgets={},minReserve=3000,goals=[],view={y:new Date().getFullYear(),m:new Date().getMonth()};
+let tx=[],open0=0,db=null,mode='m',f={},editingId=null,searchTerm='',budgets={},minReserve=3000,goals=[],fixCats=[],bsched={},view={y:new Date().getFullYear(),m:new Date().getMonth()};
 const LS='cashflow-secure-v3';
 const KC={};
 function getKey(pass){return KC[pass]||(KC[pass]=(async()=>{const e=new TextEncoder(),km=await crypto.subtle.importKey('raw',e.encode(pass),{name:'PBKDF2'},false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:e.encode('chaya-yoel-salt-v1'),iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])})())}
@@ -134,8 +139,8 @@ async function encData(text){const pass=localStorage.getItem('fcode')||'default'
 async function decData(raw){const pass=localStorage.getItem('fcode')||'default';if(pass=='default')return raw;
   try{const o=JSON.parse(raw);if(!o.iv||!o.data)return raw;const key=await getKey(pass),b=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
     return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b(o.iv)},key,b(o.data)))}catch(e){return null}}
-function load(){try{const j=JSON.parse(localStorage.getItem(LS)||localStorage.getItem('cashflow-secure-v2')||localStorage.getItem('cashflow-v1')||'{}');tx=j.tx||[];open0=+j.open||0;budgets=j.budgets||{};minReserve=Number.isFinite(+j.minReserve)?+j.minReserve:3000;goals=j.goals||[]}catch(e){}}
-function persist(){try{localStorage.setItem(LS,JSON.stringify({tx,open:open0,budgets,minReserve,goals}))}catch(e){}}
+function load(){try{const j=JSON.parse(localStorage.getItem(LS)||localStorage.getItem('cashflow-secure-v2')||localStorage.getItem('cashflow-v1')||'{}');tx=j.tx||[];open0=+j.open||0;budgets=j.budgets||{};minReserve=Number.isFinite(+j.minReserve)?+j.minReserve:3000;goals=j.goals||[];fixCats=j.fixCats||[];bsched=j.bsched||{}}catch(e){}}
+function persist(){try{localStorage.setItem(LS,JSON.stringify({tx,open:open0,budgets,minReserve,goals,fixCats,bsched}))}catch(e){}}
 const ok=t=>t&&(t.type=='in'||t.type=='out')&&isFinite(t.amt)&&/^\d{4}-\d\d-\d\d$/.test(t.date)&&/^[a-z0-9]+$/.test(t.id)&&typeof t.cat=='string';
 const sg=t=>t.type=='in'?t.amt:-t.amt;
 const cashDate=t=>t.done?(t.actualDate||t.date):t.date;
@@ -151,35 +156,35 @@ async function put(list){
   if(db)await Promise.all(list.map(async t=>db.collection('tx').doc(t.id).set({payload:await encData(JSON.stringify(t))})));
 }
 async function del(ids){tx=tx.filter(t=>!ids.includes(t.id));persist();draw();if(db)await Promise.all(ids.map(id=>db.collection('tx').doc(id).delete()))}
-async function saveSettings(){persist();draw();if(db)await db.doc('meta/settings').set({payload:await encData(JSON.stringify({open:open0,budgets,minReserve,goals}))})}
+async function saveSettings(){persist();draw();if(db)await db.doc('meta/settings').set({payload:await encData(JSON.stringify({open:open0,budgets,minReserve,goals,fixCats,bsched}))})}
 async function setOpen(v){open0=v;await saveSettings()}
 function show(h,c=''){$('#ov').innerHTML='<div class="sh '+c+'" onclick="event.stopPropagation()">'+h+'</div>';$('#ov').className='on'}
 function cl(){$('#ov').className=''}
 function go(d){if(mode!='y'){let m=view.m+d,y=view.y;if(m<0){m=11;y--}if(m>11){m=0;y++}view={y,m}}else view.y+=d;draw()}
 async function tog(id){const t=tx.find(x=>x.id==id);if(!t)return;const n={...t,done:!t.done};if(n.done)n.actualDate=T();else delete n.actualDate;try{await put([n])}catch(e){toast()}}
 function act(id){const t=tx.find(x=>x.id==id);if(!t)return;
-  show(`<p style="font-size:18px;margin:4px 0 8px"><b>${esc(t.note||t.cat)}</b> · ${fm(sg(t))}</p><button class="bt" onclick="editTx('${id}')">עריכת תנועה</button>${t.rid?`<button class="bt" onclick="editTx('${id}',1)">עריכה של כל הבאים בסדרה</button><button class="bt g" onclick="extend('${id}')">הארכת הוראת קבע ב־12 חודשים</button>`:''}<button class="bt d" onclick="rm('${id}',0)">מחיקה</button>${t.rid?`<button class="bt d" onclick="rm('${id}',1)">מחיקה גם של כל הבאים</button>`:''}<button class="bt g" onclick="cl()">ביטול</button>`)}
+  show(`<p style="font-size:18px;margin:4px 0 8px"><b>${esc(t.note||t.cat)}</b> · ${fm(sg(t))}</p>${seriesInfo(t)}<button class="bt" onclick="editTx('${id}')">עריכת תנועה</button>${t.rid?`<button class="bt" onclick="editTx('${id}',1)">עריכה של כל הבאים בסדרה</button><button class="bt g" onclick="extend('${id}')">הארכת הוראת קבע ב־12 חודשים</button>`:''}<button class="bt d" onclick="rm('${id}',0)">מחיקה</button>${t.rid?`<button class="bt d" onclick="rm('${id}',1)">מחיקה גם של כל הבאים</button>`:''}<button class="bt g" onclick="cl()">ביטול</button>`)}
 async function rm(id,all){const t=tx.find(x=>x.id==id);if(!t)return;cl();
   const ids=all?tx.filter(x=>x.rid==t.rid&&x.date>=t.date).map(x=>x.id):[id];try{await del(ids)}catch(e){toast()}}
 function askBank(){show(`<p style="margin:4px 0">כמה יש כרגע בחשבון הבנק?</p><input id="bk" type="number" inputmode="decimal" value="${Math.round(bank()*100)/100}"><button class="bt" onclick="saveBank()">עדכון</button><button class="bt g" onclick="cl()">ביטול</button>`);$('#bk').select()}
 async function saveBank(){const v=parseFloat($('#bk').value);if(!isFinite(v))return;cl();try{await setOpen(open0+v-bank())}catch(e){toast()}}
 const nt=()=>f.type=='out'&&!f.done;
-function openAdd(ds){editingId=null;editAll=false;f={type:'out',cat:'',done:true,rec:false,n:12,date:ds||T(),amt:'',note:''};if(f.date>T())f.done=false;renderForm();$('#amt').focus()}
+function openAdd(ds){editingId=null;editAll=false;f={type:'out',cat:'',done:true,rec:false,n:12,date:ds||T(),amt:'',note:'',fix:false};if(f.date>T())f.done=false;renderForm();$('#amt').focus()}
 function sf(k,v){f[k]=v;if(k=='done'&&v)f.actual=T();if(k=='type')f.cat='';if(k=='date'&&v>T())f.done=false;renderForm();if(k=='type')$('#amt').focus()}
 const can=()=>+f.amt>0&&!!f.cat;
 function chk(){$('#sv').disabled=!can()}
-const pick=i=>{const c=(f.type=='in'?IN:OUT)[i];f.cat=f.cat==c?'':c;renderForm()};
+const pick=i=>{const c=catsOf()[i];f.cat=f.cat==c?'':c;renderForm()};
 function renderForm(){
-  const cats=f.type=='in'?IN:OUT;
-  show(`<div class="seg"><button class="${f.type=='out'?'on':''}" onclick="sf('type','out')">הוצאה</button><button class="${f.type=='in'?'on':''}" onclick="sf('type','in')">הכנסה</button></div>
+  const cats=catsOf();
+  show(`<div class="seg"><button class="${f.type=='out'&&!f.fix?'on':''}" onclick="setKind('imm')">הוצאה מיידית</button><button class="${f.type=='out'&&f.fix?'on':''}" onclick="setKind('fix')">הוצאה קבועה</button><button class="${f.type=='in'?'on':''}" onclick="setKind('in')">הכנסה</button></div>
 <input id="amt" type="number" inputmode="decimal" placeholder="סכום ₪" value="${esc(f.amt)}" oninput="f.amt=this.value;chk()">
 <input type="text" maxlength="60" placeholder="הערה (לא חובה)" value="${esc(f.note)}" oninput="f.note=this.value;chk()">
 <div class="chips">${cats.map((c,i)=>`<button class="${f.cat==c?'on':''}" onclick="pick(${i})">${IC[c]||''} ${c}</button>`).join('')}</div>
-<div class="seg"><button class="${f.done?'on':''}" onclick="sf('done',true)">כבר בוצע בבנק</button><button class="${f.done?'':'on'}" onclick="sf('done',false)">צפי / עתידי</button></div>
+${f.fix?fixAddHTML():''}<div class="seg"><button class="${f.done?'on':''}" onclick="sf('done',true)">כבר בוצע בבנק</button><button class="${f.done?'':'on'}" onclick="sf('done',false)">צפי / עתידי</button></div>
 <label class="muted">${editingId?'תאריך מתוכנן':'תאריך'}</label><input type="date" value="${f.date}" onchange="if(this.value)sf('date',this.value)">${editingId&&f.done?`<label class="muted">תאריך ביצוע בפועל</label><input type="date" value="${esc(f.actual||'')}" onchange="f.actual=this.value">`:''}
-<label class="rc" style="${editingId?'display:none':''}"><input type="checkbox" ${f.rec?'checked':''} onchange="f.rec=this.checked;renderForm()">הוראת קבע / קבוע</label>
-${f.rec?`<div class="nm"><span>חוזר על עצמו</span><input type="number" inputmode="numeric" min="2" max="60" value="${f.n}" oninput="f.n=this.value"><span>פעמים</span><small>פעם בחודש, כולל הפעם הראשונה</small></div>`:''}
-${editAll?'<p class="muted">הסכום, הקטגוריה וההערה ישונו בכל החודשים הבאים בסדרה. התאריך והסטטוס ישתנו רק בתנועה הזו.</p>':''}${f.wid?'<p class="muted">שבוע בתקציב חודשי: שינוי הסכום יחשב מחדש את שאר השבועות.</p>':''}<button class="bt" id="sv" onclick="save()" ${can()?'':'disabled'}>שמירה</button>`,f.type)}
+<label class="rc" style="${editingId||f.fix?'display:none':''}"><input type="checkbox" ${f.rec?'checked':''} onchange="f.rec=this.checked;renderForm()">הוראת קבע / קבוע</label>
+${f.rec?`<div class="nm"><span>${f.fix?'מספר תשלומים':'חוזר על עצמו'}</span><input type="number" inputmode="numeric" min="2" max="60" value="${f.n}" oninput="f.n=this.value"><span>פעמים</span><small>פעם בחודש, כולל התשלום הראשון. אפשר להאריך אחר כך.</small></div>`:''}
+${editAll?'<p class="muted">הסכום, הקטגוריה וההערה ישונו בכל החודשים הבאים בסדרה. התאריך והסטטוס ישתנו רק בתנועה הזו.</p>':''}${f.wid?'<p class="muted">חלק מתקציב חודשי: שינוי הסכום יחשב מחדש את שאר החלקים בחודש.</p>':''}<button class="bt" id="sv" onclick="save()" ${can()?'':'disabled'}>שמירה</button>`,f.type)}
 async function save(){
   if(!can())return;
   const a=+f.amt,note=String(f.note||'').trim(),n=f.rec&&!editingId?Math.max(1,Math.min(60,parseInt(f.n)||1)):1,rid=n>1?uid():'',[y,m,d]=f.date.split('-').map(Number),list=[];
@@ -197,8 +202,6 @@ async function save(){
 }
 const dm=s=>s.split('-').reverse().join('/');
 function saveFile(n,c,t){const u=URL.createObjectURL(new Blob([c],{type:t})),a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u)}
-function openBudgets(){show(`<h3>תקציב חודשי לפי קטגוריה</h3><p class="muted">השאירו ריק בקטגוריות ללא תקציב.</p>${OUT.map((c,i)=>`<label style="display:block;margin:8px 0">${IC[c]||''} ${c}<input id="bud${i}" type="number" min="0" inputmode="decimal" placeholder="₪ לחודש" value="${budgets[c]??''}"></label>`).join('')}<button class="bt" onclick="saveBudgets()">שמירה</button><button class="bt g" onclick="cl()">ביטול</button>`)}
-async function saveBudgets(){const nb={};OUT.forEach((c,i)=>{const e=$('#bud'+i),v=parseFloat(e.value);if(e.value!==''&&v>=0)nb[c]=v});budgets=nb;cl();try{await saveSettings()}catch(e){toast()}}
 function openReserve(){show(`<h3>רף יתרה בטוחה</h3><p class="muted">תוצג התראה כשהתחזית יורדת מתחת לסכום הזה.</p><input id="rs" type="number" min="0" inputmode="decimal" value="${minReserve}"><button class="bt" onclick="saveReserve()">שמירה</button><button class="bt g" onclick="cl()">ביטול</button>`)}
 async function saveReserve(){const v=parseFloat($('#rs').value);if(!(v>=0))return;minReserve=v;cl();try{await saveSettings()}catch(e){toast()}}
 function forecastEvents(n){const s=T();let b=balanceAt(s),mn=b,md=s,lo=b<minReserve?s:null;const dl=[];
@@ -211,7 +214,7 @@ function openGoals(){show(`<h3>יעדי חיסכון</h3>${goals.map((g,i)=>`<di
 async function addGoal(){const name=$('#gn').value.trim(),target=parseFloat($('#gt').value),saved=parseFloat($('#gs').value)||0;if(!name||!(target>0)||saved<0)return;goals.push({name,target,saved});try{await saveSettings();openGoals()}catch(e){toast()}}
 async function delGoal(i){goals.splice(i,1);try{await saveSettings();openGoals()}catch(e){toast()}}
 function exportCSV(){const r=[['תאריך מתוכנן','תאריך ביצוע','סוג','קטגוריה','סכום','סטטוס','הערה'],...tx.map(t=>[t.date,t.actualDate||'',t.type=='in'?'הכנסה':'הוצאה',t.cat,t.amt,t.done?'בוצע':'צפי',t.note||''])];saveFile('transactions.csv','\uFEFF'+r.map(x=>x.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8')}
-function exportBackup(){saveFile('backup.json',JSON.stringify({tx,open:open0,budgets,minReserve,goals},null,1),'application/json')}
+function exportBackup(){saveFile('backup.json',JSON.stringify({tx,open:open0,budgets,minReserve,goals,fixCats,bsched},null,1),'application/json')}
 let simType='out';
 function openSimulator(){simType='out';show(`<h3>סימולציית תזרים</h3><p class="muted">בדקו השפעה של הכנסה או הוצאה בתאריך שתבחרו, בלי לשנות נתונים.</p><div class="seg"><button id="simOut" class="on" onclick="setSimType('out')">הוצאה</button><button id="simIn" onclick="setSimType('in')">הכנסה</button></div><input id="simAmt" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="סכום ₪" value="3000"><input id="simDate" type="date" value="${T()}"><button class="bt" onclick="runSim()">הרץ סימולציה</button><button class="bt g" onclick="cl()">סגירה</button>`)}
 function setSimType(t){simType=t;$('#simOut').classList.toggle('on',t=='out');$('#simIn').classList.toggle('on',t=='in')}
@@ -233,33 +236,16 @@ function sum(){
   const blk=(type,title)=>{const by={};L.filter(t=>t.type==type).forEach(t=>by[t.cat]=(by[t.cat]||0)+t.amt);
     const es=Object.entries(by).sort((a,b)=>b[1]-a[1]),tot=es.reduce((a,e)=>a+e[1],0);
     return `<div class="sm ${type}"><div class="hd"><b>${title}</b><b>${fm(tot)}</b></div>`+(es.length?es.map(([c,v])=>`<div class="r"><span>${IC[c]||''} ${esc(c)}</span><span class="am">${fm(v)}</span></div>`).join(''):'<p class="em" style="margin:12px">אין תנועות</p>')+'</div>'};
-  return getAnalysisHTML(view.y,view.m)+toolsHTML()+weeklyHTML(view.y,view.m)+budgetHTML(view.y,view.m)+compareHTML(view.y,view.m)+blk('in','הכנסות')+blk('out','הוצאות')+`<div class="m m2"><small>סך הכול ${MN[view.m]} (כולל צפי)</small><b>${fm(net(view.y,view.m),1)}</b></div>`;
+  return getAnalysisHTML(view.y,view.m)+budgetHTML(view.y,view.m)+compareHTML(view.y,view.m)+blk('in','הכנסות')+blk('out','הוצאות')+`<div class="m m2"><small>סך הכול ${MN[view.m]} (כולל צפי)</small><b>${fm(net(view.y,view.m),1)}</b></div>`;
 }
 function listHTML(){const q=searchTerm.toLowerCase(),L=inM(view.y,view.m).filter(t=>!q||[t.cat,t.note,t.amt,t.date].join(' ').toLowerCase().includes(q)).sort((a,b)=>cashDate(a)<cashDate(b)?-1:cashDate(a)>cashDate(b)?1:0);return L.length?L.map(t=>`<div class="row ${t.type}${t.done?'':' pl'}" onclick="act('${t.id}')"><div class="ic">${IC[t.cat]||'🧾'}</div><div class="g"><div>${esc(t.note||t.cat)}</div><small>${t.note?esc(t.cat)+' · ':''}${+cashDate(t).slice(8)}/${+cashDate(t).slice(5,7)}${t.done?'':' · צפי'}${t.done&&t.actualDate&&t.actualDate!=t.date?' · תוכנן ל־'+(+t.date.slice(8))+'/'+(+t.date.slice(5,7)):''}${t.rid?' · קבוע':''}</small></div><div class="am">${fm(sg(t),1)}</div><button class="ck ${t.done?'on':''}" onclick="event.stopPropagation();tog('${t.id}')" aria-label="סימון כבוצע">${t.done?'✓':''}</button></div>`).join(''):'<p class="em">אין תנועות בחודש הזה 🌸<br>לחצו ＋ כדי להוסיף</p>'}
-let syncState='',wf={cat:'סופר',total:'',wd:0},editAll=false;
+let syncState='',editAll=false;
 const syncLabel=()=>!db?'⚪ מצב מקומי – ללא סנכרון':!navigator.onLine?'🟠 אין אינטרנט – השינויים נשמרים בטלפון ויסונכרנו כשהרשת תחזור':syncState=='pending'?'🟠 ממתין לסנכרון':'🟢 מסונכרן';
 addEventListener('online',()=>draw());addEventListener('offline',()=>draw());
-const wdays=(y,m,wd)=>{const r=[];for(let d=1,n=new Date(y,m+1,0).getDate();d<=n;d++)if(new Date(y,m,d).getDay()==wd)r.push(d);return r};
 function rebal(g){
   const tot=g[0]?g[0].wtotal:0,fx=g.filter(t=>t.done||t.wfix),fr=g.filter(t=>!(t.done||t.wfix));
   const rem=Math.max(0,tot-fx.reduce((a,t)=>a+t.amt,0)),each=fr.length?Math.round(rem/fr.length*100)/100:0;
   return g.map(t=>{const i=fr.indexOf(t);return i<0?t:{...t,amt:i<fr.length-1?each:Math.round((rem-each*(fr.length-1))*100)/100}})}
-function weeklyHTML(y,m){
-  const ym=y+'-'+pad(m+1),G={};tx.filter(t=>t.wid&&t.date.slice(0,7)==ym).forEach(t=>(G[t.wid]=G[t.wid]||[]).push(t));
-  return Object.entries(G).map(([w,L])=>{L.sort((a,b)=>a.date<b.date?-1:1);
-    const tot=L[0].wtotal,sp=L.filter(t=>t.done).reduce((a,t)=>a+t.amt,0),all=L.reduce((a,t)=>a+t.amt,0),p=tot?sp/tot*100:0,over=sp>tot||all>tot+.5;
-    return `<div class="sm"><div class="hd"><b>${IC[L[0].cat]||''} ${esc(L[0].cat)}</b><button class="yh" onclick="editPlan('${w}')">עריכה</button></div><div class="statline" style="border:0"><span>נוצל ${fm(sp)} מתוך ${fm(tot)}</span><b class="${over?'bad':'good'}">${Math.round(p)}%</b></div><div class="progress${over?' over':''}"><span style="width:${Math.min(100,p)}%"></span></div>${over?`<div class="muted bad">חריגה של ${fm(Math.max(sp,all)-tot)}</div>`:''}${L.map(t=>`<div class="statline" onclick="act('${t.id}')"><span>${dm(t.date)}${t.done?' ✓':''}</span><b>${fm(t.amt)}</b></div>`).join('')}</div>`}).join('')}
-function openWeekly(){
-  show(`<h3>תקציב חודשי מחולק לשבועות · ${MN[view.m]}</h3>${weeklyHTML(view.y,view.m)||'<p class="muted">אין עדיין תוכניות בחודש הזה.</p>'}<div class="sm"><b>תוכנית חדשה</b><div class="chips">${OUT.map((c,i)=>`<button class="${wf.cat==c?'on':''}" onclick="wf.cat=OUT[${i}];openWeekly()">${IC[c]||''} ${c}</button>`).join('')}</div><input type="number" min="1" inputmode="decimal" placeholder="תקציב חודשי ₪ (למשל 4000)" value="${esc(wf.total)}" oninput="wf.total=this.value"><p class="muted" style="margin:8px 0 4px">היום בשבוע שבו ההוצאה יורדת:</p><div class="seg">${['א','ב','ג','ד','ה','ו','ש'].map((d,i)=>`<button class="${wf.wd==i?'on':''}" onclick="wf.wd=${i};openWeekly()">${d}</button>`).join('')}</div><p class="muted">הסכום יתחלק שווה בין ${wdays(view.y,view.m,wf.wd).length} שבועות בחודש.</p><button class="bt" onclick="makePlan()">יצירת תוכנית</button></div><button class="bt g" onclick="cl()">סגירה</button>`)}
-async function makePlan(){const tot=parseFloat(wf.total);if(!(tot>0))return;
-  const y=view.y,m=view.m,ds=wdays(y,m,wf.wd),wid=uid(),each=Math.round(tot/ds.length*100)/100;
-  const list=ds.map((d,i)=>({id:uid(),type:'out',cat:wf.cat,amt:i<ds.length-1?each:Math.round((tot-each*(ds.length-1))*100)/100,date:y+'-'+pad(m+1)+'-'+pad(d),done:false,actualDate:'',rid:'',note:`שבוע ${i+1} מתוך ${ds.length}`,wid,wtotal:tot,wfix:false}));
-  wf.total='';try{await put(list)}catch(e){toast()}openWeekly()}
-function editPlan(w){const L=tx.filter(t=>t.wid==w);if(!L.length)return;
-  show(`<h3>${IC[L[0].cat]||''} ${esc(L[0].cat)} · תקציב חודשי</h3><input id="wt" type="number" min="1" inputmode="decimal" value="${L[0].wtotal}"><p class="muted">שינוי הסכום יחלק מחדש את מה שנשאר בין השבועות שעוד לא בוצעו ולא נערכו ידנית.</p><button class="bt" onclick="savePlan('${w}')">שמירה</button><button class="bt d" onclick="delPlan('${w}')">מחיקת התוכנית (שבועות שבוצעו נשארים)</button><button class="bt g" onclick="openWeekly()">חזרה</button>`)}
-async function savePlan(w){const v=parseFloat($('#wt').value);if(!(v>0))return;try{await put(rebal(tx.filter(t=>t.wid==w).map(t=>({...t,wtotal:v}))))}catch(e){toast()}openWeekly()}
-async function delPlan(w){const L=tx.filter(t=>t.wid==w),keep=L.filter(t=>t.done).map(t=>{const u={...t};delete u.wid;delete u.wtotal;delete u.wfix;return u});
-  try{await del(L.filter(t=>!t.done).map(t=>t.id));if(keep.length)await put(keep)}catch(e){toast()}openWeekly()}
 async function extend(id){const t=tx.find(x=>x.id==id);if(!t||!t.rid)return;cl();
   const g=tx.filter(x=>x.rid==t.rid).sort((a,b)=>a.date<b.date?-1:1),l=g[g.length-1],[y,m]=l.date.split('-').map(Number),day=+g[0].date.slice(8),L=[];
   for(let i=1;i<=12;i++){const dt=new Date(y,m-1+i,1),dim=new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate();L.push({...l,id:uid(),date:ymd(new Date(dt.getFullYear(),dt.getMonth(),Math.min(day,dim))),done:false,actualDate:''})}
@@ -273,7 +259,7 @@ function compareHTML(y,m){
 function budgetHTML(y,m){
   const sp={},pl={};inM(y,m).filter(t=>t.type=='out').forEach(t=>{const o=t.done?sp:pl;o[t.cat]=(o[t.cat]||0)+t.amt});
   const rows=Object.entries(budgets).map(([c,l])=>{const u=sp[c]||0,p=pl[c]||0,over=u>l,exp=!over&&u+p>l,pc=l?Math.min(100,u/l*100):0;
-    return `<div class="statline" style="display:block"><div style="display:flex;justify-content:space-between"><span>${IC[c]||''} ${esc(c)}</span><b class="${over?'bad':'good'}">₪${Math.round(u).toLocaleString('he-IL')} / ₪${Number(l).toLocaleString('he-IL')}</b></div><div class="progress${over?' over':''}"><span style="width:${pc}%"></span></div><div class="muted${over||exp?' bad':''}">${over?'חריגה של ₪'+Math.round(u-l).toLocaleString('he-IL'):exp?'צפי חריגה של ₪'+Math.round(u+p-l).toLocaleString('he-IL')+' כולל תנועות צפויות':'נוצלו '+Math.round(pc)+'%'+(p?' · צפי נוסף ₪'+Math.round(p).toLocaleString('he-IL'):'')}</div></div>`}).join('');
+    return `<div class="statline" style="display:block"><div style="display:flex;justify-content:space-between"><span>${IC[c]||''} ${esc(c)}</span><b class="${over?'bad':'good'}">₪${Math.round(u).toLocaleString('he-IL')} / ₪${Number(l).toLocaleString('he-IL')}</b></div><div class="progress${over?' over':''}"><span style="width:${pc}%"></span></div><div class="muted${over||exp?' bad':''}">${over?'חריגה של ₪'+Math.round(u-l).toLocaleString('he-IL'):exp?'צפי חריגה של ₪'+Math.round(u+p-l).toLocaleString('he-IL')+' כולל תנועות צפויות':'נוצלו '+Math.round(pc)+'%'+(p?' · צפי נוסף ₪'+Math.round(p).toLocaleString('he-IL'):'')}</div>${(bsched[c]||{}).d?`<div class="muted">נרשם אוטומטית בימים ${bsched[c].d.join(', ')} בכל חודש</div>`:''}</div>`}).join('');
   return `<div class="sm"><div class="hd"><b>תקציב חודשי</b><button class="yh" onclick="openBudgets()">עריכה</button></div>${rows||'<p class="muted">לא הוגדרו תקציבים.</p>'}</div>`}
 function getAnalysisHTML(y,m){
   const now=new Date(),cur=y==now.getFullYear()&&m==now.getMonth(),warn=[],l0=cur?now.getDate():31,sums={};
@@ -283,18 +269,43 @@ function getAnalysisHTML(y,m){
       const lim=cur?now.getDate():new Date(py,pm+1,0).getDate();
       const ps=inM(py,pm).filter(t=>t.type=='out'&&t.done&&t.cat==c&&+cashDate(t).slice(8,10)<=lim).reduce((a,t)=>a+t.amt,0);if(ps>0)pv.push(ps)}
     if(pv.length>=2){const avg=pv.reduce((a,b)=>a+b,0)/pv.length;if(sums[c]>avg*1.35&&sums[c]>300)warn.push(`חריגה בקטגוריה <b>${esc(c)}</b>: ₪${Math.round(sums[c])} לעומת ממוצע של ₪${Math.round(avg)}`)}}
-  return(warn.length?`<div class="alert-box">⚠️ <b>ניטור חריגות:</b><br>${warn.join('<br>')}</div>`:'')+`<button class="bt g" onclick="openSimulator()" style="margin-bottom:10px">🧪 סימולציית “מה קורה אם...”</button>`}
+  return(warn.length?`<div class="alert-box">⚠️ <b>ניטור חריגות:</b><br>${warn.join('<br>')}</div>`:'')}
 function importBackup(){const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
   inp.onchange=async()=>{const fl=inp.files[0];if(!fl)return;try{const j=JSON.parse(await fl.text()),L=(j.tx||[]).map(t=>({...t,amt:Number(t.amt)||0})).filter(ok);if(!L.length&&!j.budgets)throw 0;
     show(`<h3>שחזור מגיבוי</h3><p>נמצאו ${L.length} תנועות. הן יתווספו או יעודכנו לפי המזהה שלהן. תנועות קיימות אחרות לא יימחקו.</p><button class="bt" id="rb">שחזור</button><button class="bt g" onclick="cl()">ביטול</button>`);
-    $('#rb').onclick=async()=>{cl();if(j.open!=null)open0=Number(j.open)||0;if(j.budgets&&typeof j.budgets=='object')budgets=j.budgets;if(Number.isFinite(Number(j.minReserve)))minReserve=Number(j.minReserve);if(Array.isArray(j.goals))goals=j.goals;try{await put(L);await saveSettings()}catch(e){toast()}}
+    $('#rb').onclick=async()=>{cl();if(j.open!=null)open0=Number(j.open)||0;if(j.budgets&&typeof j.budgets=='object')budgets=j.budgets;if(Number.isFinite(Number(j.minReserve)))minReserve=Number(j.minReserve);if(Array.isArray(j.goals))goals=j.goals;if(Array.isArray(j.fixCats))fixCats=j.fixCats;if(j.bsched&&typeof j.bsched=='object')bsched=j.bsched;try{await put(L);await saveSettings()}catch(e){toast()}}
   }catch(e){toast()}};inp.click()}
-function toolsHTML(){return `<div class="tools"><button onclick="openWeekly()">תקציב שבועי</button><button onclick="openBudgets()">תקציבים</button><button onclick="openReserve()">רף יתרה בטוחה</button><button onclick="openGoals()">יעדי חיסכון</button><button onclick="openForecast(30)">תחזית 30 יום</button><button onclick="openForecast(90)">תחזית 90 יום</button><button onclick="exportCSV()">ייצוא CSV</button><button onclick="exportBackup()">גיבוי מלא</button><button onclick="importBackup()">שחזור מגיבוי</button></div>`}
-function editTx(id,all){const t=tx.find(x=>x.id===id);if(!t)return;editingId=id;editAll=!!all;f={type:t.type,cat:t.cat,done:!!t.done,rec:false,n:12,date:t.date,amt:String(t.amt),note:t.note||'',wid:t.wid,actual:t.done?(t.actualDate||t.date):T()};renderForm()}
+function editTx(id,all){const t=tx.find(x=>x.id===id);if(!t)return;editingId=id;editAll=!!all;f={type:t.type,cat:t.cat,done:!!t.done,rec:false,n:12,date:t.date,amt:String(t.amt),note:t.note||'',wid:t.wid,fix:t.type=='out'&&FIX().includes(t.cat),actual:t.done?(t.actualDate||t.date):T()};renderForm()}
+const FIX0=['בי״ס רועי','ישיבה איתן','הלוואה','חשמל','פלאפון','שכירות','תרומה','חיה חדר כושר','חיה לימודים','אינטרנט','ארנונה','גז','מים','וועד בניין'];
+const FIX=()=>[...FIX0,...fixCats],catsOf=()=>f.type=='in'?IN:f.fix?FIX():OUT;
+function setKind(k){f.type=k=='in'?'in':'out';f.fix=k=='fix';f.cat='';f.adding=false;f.rec=k=='fix';if(k=='fix'&&!(f.n>=2))f.n=12;renderForm();$('#amt').focus()}
+const fixAddHTML=()=>`<div class="chips" style="grid-template-columns:1fr"><button onclick="f.adding=!f.adding;renderForm()">＋ הוצאה קבועה חדשה</button></div>${f.adding?`<div style="display:flex;gap:8px;align-items:center"><input id="nfc" maxlength="30" placeholder="שם ההוצאה הקבועה" style="flex:1;width:auto"><button class="bt" style="width:auto;margin:4px 0;padding:12px 18px" onclick="addFix()">הוספה</button></div>`:''}`;
+async function addFix(){const n=($('#nfc').value||'').trim().slice(0,30);if(!n||IN.includes(n)||OUT.includes(n)||FIX().includes(n))return;fixCats.push(n);f.cat=n;f.adding=false;renderForm();try{await saveSettings()}catch(e){toast()}}
+const seriesInfo=t=>{if(!t.rid)return t.wid?`<p class="muted">חלק מתקציב חודשי של ${esc(t.cat)}</p>`:'';
+  const g=tx.filter(x=>x.rid==t.rid).sort((a,b)=>a.date<b.date?-1:1),left=g.filter(x=>!x.done),sum=left.reduce((a,x)=>a+x.amt,0);
+  return `<div class="m m2" style="padding:12px 14px;margin:0 0 6px"><small>תשלום ${g.findIndex(x=>x.id==t.id)+1} מתוך ${g.length}</small><b style="font-size:22px">נותרו ${left.length} תשלומים · ${fm(sum)}</b></div>`};
+function openMenu(){const it=(ic,t,fn)=>`<button class="mi" onclick="${fn}"><span>${ic}</span>${t}</button>`;
+  show(`<h3>תפריט</h3>${it('💰','תקציבים חודשיים','openBudgets()')}${it('🛡️','רף יתרה בטוחה','openReserve()')}${it('🎯','יעדי חיסכון','openGoals()')}${it('📈','תחזית תזרים ל־30 יום','openForecast(30)')}${it('📊','תחזית תזרים ל־90 יום','openForecast(90)')}${it('🧪','סימולציית “מה קורה אם”','openSimulator()')}${it('📤','ייצוא CSV','cl();exportCSV()')}${it('💾','גיבוי מלא','cl();exportBackup()')}${it('📥','שחזור מגיבוי','cl();importBackup()')}${window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey?it('🔑','קוד סנכרון','askCode()'):''}<button class="bt g" onclick="cl()">סגירה</button>`)}
+function spread(n){return Array.from({length:n},(_,i)=>Math.round(1+i*28/n))}
+function openBudgets(){show(`<h3>תקציב חודשי לפי קטגוריה</h3><p class="muted">הגדירו סכום חודשי, וכמה פעמים בחודש (ובאילו ימים) ההוצאה תירשם אוטומטית. הסכום מתחלק שווה בין הפעמים ונכנס לצפי. השאירו ריק אם אין תקציב.</p>${OUT.map((c,i)=>{const d=(bsched[c]||{}).d||[];return `<div class="sm"><b>${IC[c]||''} ${c}</b><div style="display:flex;gap:8px"><input id="bud${i}" type="number" min="0" inputmode="decimal" placeholder="₪ לחודש" value="${budgets[c]??''}" style="flex:1;width:auto"><input id="bn${i}" type="number" min="0" max="8" inputmode="numeric" placeholder="פעמים" value="${d.length||''}" style="width:90px"></div><input id="bd${i}" type="text" placeholder="ימים בחודש, למשל 1,8,15,22 (לא חובה)" value="${d.join(',')}"></div>`}).join('')}<button class="bt" onclick="saveBudgets()">שמירה</button><button class="bt g" onclick="cl()">ביטול</button>`)}
+async function saveBudgets(){const nb={},ns={};
+  OUT.forEach((c,i)=>{const e=$('#bud'+i),v=parseFloat(e.value);if(e.value===''||!(v>=0))return;nb[c]=v;
+    let d=[...new Set($('#bd'+i).value.split(/[,\s]+/).map(Number).filter(x=>x>=1&&x<=31))].sort((a,b)=>a-b);
+    const n=parseInt($('#bn'+i).value)||0;if(!d.length&&n>0)d=spread(Math.min(8,n));if(d.length&&v>0)ns[c]={d}});
+  budgets=nb;bsched=ns;cl();try{await saveSettings();await genBudget()}catch(e){toast()}}
+async function genBudget(){
+  const now=new Date(),y0=now.getFullYear(),m0=now.getMonth(),start=y0+'-'+pad(m0+1)+'-01';
+  const gone=tx.filter(t=>t.bud&&!(t.done||t.wfix)&&t.date>=start).map(t=>t.id),rest=tx.filter(t=>!gone.includes(t.id)),list=[];
+  for(const c in bsched){const i=OUT.indexOf(c),lim=budgets[c];if(i<0||!(lim>0))continue;
+    for(let k=0;k<12;k++){const dt=new Date(y0,m0+k,1),yy=dt.getFullYear(),mm=dt.getMonth(),dim=new Date(yy,mm+1,0).getDate(),wid='b'+i+yy+pad(mm+1);
+      const ds=[...new Set(bsched[c].d.map(x=>Math.min(x,dim)))],ex=rest.filter(t=>t.wid==wid).map(t=>({...t,wtotal:lim}));
+      const nw=ds.filter(d=>!ex.some(t=>t.id==wid+'d'+pad(d))).map(d=>({id:wid+'d'+pad(d),type:'out',cat:c,amt:lim/ds.length,date:yy+'-'+pad(mm+1)+'-'+pad(d),done:false,actualDate:'',rid:'',note:`תקציב ${c} · ${ds.indexOf(d)+1}/${ds.length}`,wid,wtotal:lim,wfix:false,bud:1}));
+      list.push(...rebal([...ex,...nw]).filter(t=>t.amt>0))}}
+  try{await del(gone);await put(list)}catch(e){toast()}}
 function draw(){
   const n=new Date(),cur=view.y==n.getFullYear()&&view.m==n.getMonth();
   const tab=(k,l)=>`<button class="${mode==k?'on':''}" onclick="mode='${k}';draw()">${l}</button>`;
-  let h=`<div class="m m1"><small>יש עכשיו בבנק</small><button class="ed" onclick="askBank()">עדכון</button><b>${fm(bank())}</b></div>
+  let h=`<div class="bar"><button class="menu" onclick="openMenu()" aria-label="תפריט">☰</button><b>תקציב חיה ויואל</b></div><div class="m m1"><small>יש עכשיו בבנק</small><button class="ed" onclick="askBank()">עדכון</button><b>${fm(bank())}</b></div>
 <div class="m m2"><small>צפי לסוף ${cur?'החודש':MN[view.m]+' '+view.y}</small><b>${fm(fc(view.y,view.m))}</b></div>
 ${reserveAlertHTML()}
 <div class="seg">${tab('m','חודש')}${tab('s','סיכום')}${tab('y','שנה')}</div>
@@ -326,7 +337,7 @@ load();draw();
     let o=s.data();if(!o)return;
     if(o.payload){const p=await decData(o.payload);try{o=JSON.parse(p)}catch(e){return}if(!o)return}
     else if(typeof o.b=='string'){try{o={...o,budgets:JSON.parse(o.b)}}catch(e){}}
-    open0=Number(o.open)||0;if(o.budgets&&typeof o.budgets=='object')budgets=o.budgets;if(Number.isFinite(Number(o.minReserve)))minReserve=Number(o.minReserve);if(Array.isArray(o.goals))goals=o.goals;persist();draw()},()=>{});
+    open0=Number(o.open)||0;if(o.budgets&&typeof o.budgets=='object')budgets=o.budgets;if(Number.isFinite(Number(o.minReserve)))minReserve=Number(o.minReserve);if(Array.isArray(o.goals))goals=o.goals;if(Array.isArray(o.fixCats))fixCats=o.fixCats;if(o.bsched&&typeof o.bsched=='object')bsched=o.bsched;persist();draw()},()=>{});
 }catch(e){db=null}})();
 function askCode(){show(`<p style="margin:4px 0">קוד סנכרון משפחתי – גם מצפין את הנתונים. אותו קוד בשני הטלפונים (לפחות 6 תווים, עדיף ארוך)</p><input id="fc" type="password" maxlength="40" value="${esc(localStorage.getItem('fcode')||'')}"><label class="rc"><input type="checkbox" onchange="$('#fc').type=this.checked?'text':'password'">הצג קוד</label><button class="bt" onclick="saveCode()">שמירה</button><button class="bt g" onclick="cl()">ביטול</button>`)}
 function saveCode(){const v=$('#fc').value.trim();if(v.length<6)return;try{localStorage.setItem('fcode',v)}catch(e){}location.reload()}
